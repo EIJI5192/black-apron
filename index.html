@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blackエプロン シフト管理</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;background:#f5f5f0;min-height:100vh}
+.app{max-width:480px;margin:0 auto;background:#fff;min-height:100vh}
+.header{background:#1a1a1a;color:#fff;padding:16px;display:flex;align-items:center;gap:12px}
+.header-icon{font-size:24px}
+.header h1{font-size:17px;font-weight:500}
+.header p{font-size:12px;color:#aaa;margin-top:2px}
+.tabs{display:flex;border-bottom:1px solid #e5e5e5;background:#fff;position:sticky;top:0;z-index:10}
+.tab{flex:1;padding:12px 8px;text-align:center;font-size:13px;cursor:pointer;color:#888;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
+.tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a;font-weight:500}
+.section{padding:16px;display:none}
+.section.active{display:block}
+.card{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:14px;margin-bottom:12px}
+.card-title{font-size:13px;color:#888;margin-bottom:10px}
+input[type=text],textarea{width:100%;padding:10px 12px;border:1px solid #e5e5e5;border-radius:8px;font-size:15px;background:#fafafa;color:#1a1a1a;font-family:inherit;outline:none}
+input[type=text]:focus,textarea:focus{border-color:#888;background:#fff}
+textarea{resize:vertical;min-height:64px}
+input[type=time]{padding:8px 12px;border:1px solid #e5e5e5;border-radius:8px;font-size:15px;background:#fafafa;color:#1a1a1a;font-family:inherit;outline:none}
+input[type=time]:focus{border-color:#888;background:#fff}
+.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.week-label{font-size:14px;font-weight:500;color:#1a1a1a}
+.nav-btn{background:#fafafa;border:1px solid #e5e5e5;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:18px;color:#1a1a1a;line-height:1;font-family:inherit}
+.nav-btn:active{background:#eee}
+.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px}
+.day-cell{text-align:center;cursor:pointer;border-radius:8px;padding:7px 2px;border:1px solid #e5e5e5;background:#fafafa;user-select:none}
+.day-cell .dn{font-size:10px;color:#aaa}
+.day-cell .dd{font-size:15px;font-weight:500;margin:2px 0;color:#1a1a1a}
+.day-cell.selected{background:#1a1a1a;border-color:#1a1a1a}
+.day-cell.selected .dn{color:#999}
+.day-cell.selected .dd{color:#fff}
+.day-cell.today{border-color:#555}
+.day-cell.past{opacity:0.4;pointer-events:none}
+.time-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.time-sep{font-size:13px;color:#aaa}
+.time-lbl{font-size:13px;color:#555;min-width:30px}
+.save-btn{width:100%;padding:13px;background:#1a1a1a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit}
+.save-btn:active{opacity:0.8}
+.save-btn:disabled{background:#ccc;cursor:not-allowed}
+.msg{text-align:center;font-size:13px;margin-top:10px;min-height:20px}
+.msg.ok{color:#2a7a3b}
+.msg.err{color:#c0392b}
+.view-toggle{display:flex;gap:6px;margin-bottom:12px}
+.vtab{flex:1;padding:8px;text-align:center;font-size:13px;border:1px solid #e5e5e5;border-radius:8px;cursor:pointer;background:#fafafa;color:#888;font-family:inherit}
+.vtab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.list-day{margin-bottom:14px}
+.list-day-hd{font-size:12px;font-weight:500;color:#888;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #eee}
+.list-member{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0}
+.list-member:last-child{border-bottom:none}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:500;flex-shrink:0}
+.member-name-row{display:flex;align-items:center;gap:6px}
+.member-name{font-size:14px;font-weight:500;color:#1a1a1a}
+.confirmed-badge{background:#1a1a1a;color:#fff;font-size:10px;padding:2px 7px;border-radius:100px}
+.member-time{font-size:12px;color:#888;margin-top:2px}
+.member-comment{font-size:12px;color:#aaa;margin-top:2px;font-style:italic}
+.confirm-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid #ddd;background:#fafafa;cursor:pointer;color:#555;font-family:inherit;white-space:nowrap}
+.confirm-btn.confirmed{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.member-filter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.filter-chip{padding:5px 12px;border-radius:100px;border:1px solid #e5e5e5;font-size:12px;cursor:pointer;background:#fafafa;color:#555;font-family:inherit}
+.filter-chip.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.empty{text-align:center;padding:32px 16px;color:#aaa;font-size:14px}
+.cal-wrap{overflow-x:auto;margin-bottom:14px}
+.cal-table{width:100%;border-collapse:collapse;font-size:11px;min-width:320px}
+.cal-table th{padding:5px 3px;text-align:center;color:#aaa;font-weight:400;border-bottom:1px solid #eee}
+.cal-table td{padding:4px 2px;vertical-align:top;border-bottom:1px solid #f5f5f5}
+.cal-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;color:#fff;margin:1px auto}
+.cal-dot.confirmed-dot{outline:2px solid #1a1a1a;outline-offset:1px}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid #eee;border-top-color:#1a1a1a;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.name-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.my-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;color:#fff;background:#555;flex-shrink:0}
+.sync-bar{font-size:11px;color:#aaa;text-align:right;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-icon">☕</div>
+    <div>
+      <h1>Blackエプロン シフト管理</h1>
+      <p>出勤可能日を全員で共有</p>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('input')">📝 登録</button>
+    <button class="tab" onclick="switchTab('view')">📅 みんなの予定</button>
+  </div>
+
+  <div id="tab-input" class="section active">
+    <div class="card">
+      <div class="card-title">あなたの名前</div>
+      <div class="name-row">
+        <div class="my-avatar" id="my-avatar">？</div>
+        <input type="text" id="name-input" placeholder="例：田中" maxlength="8" oninput="onNameInput()">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="week-nav">
+        <button class="nav-btn" onclick="changeWeek(-1)">‹</button>
+        <span class="week-label" id="week-label"></span>
+        <button class="nav-btn" onclick="changeWeek(1)">›</button>
+      </div>
+      <div class="card-title">出勤できる日を選ぶ（複数可）</div>
+      <div class="day-grid" id="day-grid"></div>
+      <div class="card-title">時間帯</div>
+      <div class="time-row">
+        <span class="time-lbl">開始</span>
+        <input type="time" id="time-start" value="09:00">
+        <span class="time-sep">〜</span>
+        <span class="time-lbl">終了</span>
+        <input type="time" id="time-end" value="17:00">
+      </div>
+      <div class="card-title" style="margin-top:10px">コメント（任意）</div>
+      <textarea id="comment-input" placeholder="例：午前は少し遅れるかも"></textarea>
+    </div>
+
+    <button class="save-btn" id="save-btn" onclick="saveSchedule()">登録する</button>
+    <div class="msg" id="save-msg"></div>
+  </div>
+
+  <div id="tab-view" class="section">
+    <div class="view-toggle">
+      <button class="vtab active" id="vt-list" onclick="switchViewTab('list')">リスト</button>
+      <button class="vtab" id="vt-cal" onclick="switchViewTab('cal')">カレンダー</button>
+    </div>
+    <div class="week-nav">
+      <button class="nav-btn" onclick="changeViewWeek(-1)">‹</button>
+      <span class="week-label" id="view-week-label"></span>
+      <button class="nav-btn" onclick="changeViewWeek(1)">›</button>
+    </div>
+    <div class="sync-bar" id="sync-bar"></div>
+    <div class="member-filter" id="member-filter"></div>
+    <div id="list-section"></div>
+    <div id="cal-section" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+const DB_URL = 'https://black-apron-6b687-default-rtdb.asia-southeast1.firebasedatabase.app';
+const COLORS = ['#3C3489','#185FA5','#085041','#993C1D','#993556','#854F0B','#3B6D11','#555'];
+const DAY_NAMES = ['月','火','水','木','金','土','日'];
+
+let scheduleData = {};
+let selectedDays = new Set();
+let currentWeekOffset = 0;
+let viewWeekOffset = 0;
+let viewTab = 'list';
+let filterMember = null;
+let saving = false;
+
+function getWeekDates(offset) {
+  const today = new Date();
+  const dow = today.getDay() || 7;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - dow + 1 + offset * 7);
+  monday.setHours(0,0,0,0);
+  return Array.from({length:7}, (_,i) => { const d = new Date(monday); d.setDate(monday.getDate()+i); return d; });
+}
+
+function dateKey(d) { return d.toISOString().slice(0,10); }
+
+function formatWeekLabel(days) {
+  return (days[0].getMonth()+1)+'月'+days[0].getDate()+'日 〜 '+(days[6].getMonth()+1)+'/'+days[6].getDate();
+}
+
+async function fbGet(path) {
+  const res = await fetch(DB_URL + path + '.json');
+  if (!res.ok) throw new Error('読み込みエラー');
+  return res.json();
+}
+
+async function fbSet(path, data) {
+  const res = await fetch(DB_URL + path + '.json', {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('保存エラー');
+  return res.json();
+}
+
+async function fbPatch(path, data) {
+  const res = await fetch(DB_URL + path + '.json', {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('更新エラー');
+  return res.json();
+}
+
+async function loadData() {
+  try {
+    const data = await fbGet('/schedules');
+    scheduleData = data || {};
+    setSyncBar('最終更新：' + new Date().toLocaleTimeString('ja-JP'));
+  } catch(e) {
+    setSyncBar('読み込み失敗。ネット接続を確認してください。');
+  }
+}
+
+function setSyncBar(text) {
+  const el = document.getElementById('sync-bar');
+  if (el) el.textContent = text;
+}
+
+function memberColor(name) {
+  const members = Object.keys(scheduleData);
+  const idx = members.indexOf(name);
+  return scheduleData[name]?.color || COLORS[idx % COLORS.length];
+}
+
+function onNameInput() {
+  const v = document.getElementById('name-input').value.trim();
+  const av = document.getElementById('my-avatar');
+  av.textContent = v ? v.charAt(0) : '？';
+  av.style.background = v && scheduleData[v] ? scheduleData[v].color : '#555';
+}
+
+function renderDayGrid() {
+  const days = getWeekDates(currentWeekOffset);
+  document.getElementById('week-label').textContent = formatWeekLabel(days);
+  const todayStr = dateKey(new Date());
+  const todayDate = new Date(); todayDate.setHours(0,0,0,0);
+  const grid = document.getElementById('day-grid');
+  grid.innerHTML = '';
+  days.forEach((d, i) => {
+    const key = dateKey(d);
+    const isPast = d < todayDate;
+    const cell = document.createElement('div');
+    cell.className = 'day-cell' + (selectedDays.has(key)?' selected':'') + (key===todayStr?' today':'') + (isPast?' past':'');
+    cell.innerHTML = `<div class="dn">${DAY_NAMES[i]}</div><div class="dd">${d.getDate()}</div>`;
+    if (!isPast) cell.onclick = () => {
+      selectedDays.has(key) ? selectedDays.delete(key) : selectedDays.add(key);
+      renderDayGrid();
+    };
+    grid.appendChild(cell);
+  });
+}
+
+function changeWeek(dir) { currentWeekOffset += dir; renderDayGrid(); }
+
+async function saveSchedule() {
+  if (saving) return;
+  const name = document.getElementById('name-input').value.trim();
+  if (!name) { showMsg('名前を入力してください', 'err'); return; }
+  if (selectedDays.size === 0) { showMsg('日付を選んでください', 'err'); return; }
+  const start = document.getElementById('time-start').value;
+  const end = document.getElementById('time-end').value;
+  if (!start || !end) { showMsg('時間帯を入力してください', 'err'); return; }
+  if (start >= end) { showMsg('終了時間は開始より後にしてください', 'err'); return; }
+  const comment = document.getElementById('comment-input').value.trim();
+
+  saving = true;
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>保存中...';
+
+  try {
+    const existing = await fbGet('/schedules/' + encodeURIComponent(name));
+    let color = existing?.color;
+    if (!color) {
+      const allData = await fbGet('/schedules');
+      const usedColors = Object.values(allData||{}).map(v=>v.color).filter(Boolean);
+      color = COLORS.find(c=>!usedColors.includes(c)) || COLORS[0];
+    }
+    const entries = existing?.entries || {};
+    selectedDays.forEach(day => {
+      entries[day] = { start, end, comment, confirmed: false };
+    });
+    await fbSet('/schedules/' + encodeURIComponent(name), { color, entries });
+    showMsg('✓ ' + name + 'さんの予定を登録しました！', 'ok');
+    selectedDays.clear();
+    renderDayGrid();
+  } catch(e) {
+    showMsg('保存に失敗しました。通信を確認してください。', 'err');
+  }
+
+  saving = false;
+  btn.disabled = false;
+  btn.textContent = '登録する';
+}
+
+function showMsg(text, type) {
+  const el = document.getElementById('save-msg');
+  el.textContent = text;
+  el.className = 'msg ' + (type||'');
+  setTimeout(() => { el.textContent = ''; el.className = 'msg'; }, 3500);
+}
+
+async function switchTab(t) {
+  ['input','view'].forEach(id => {
+    document.getElementById('tab-'+id).classList.toggle('active', id===t);
+  });
+  document.querySelectorAll('.tab').forEach((el,i) => {
+    el.classList.toggle('active', ['input','view'][i]===t);
+  });
+  if (t === 'view') {
+    document.getElementById('list-section').innerHTML = '<div class="empty"><span class="spinner"></span>読み込み中...</div>';
+    await loadData();
+    filterMember = null;
+    renderMemberFilter();
+    renderViewSection();
+  }
+}
+
+function switchViewTab(t) {
+  viewTab = t;
+  document.getElementById('vt-list').classList.toggle('active', t==='list');
+  document.getElementById('vt-cal').classList.toggle('active', t==='cal');
+  document.getElementById('list-section').style.display = t==='list'?'block':'none';
+  document.getElementById('cal-section').style.display = t==='cal'?'block':'none';
+  renderViewSection();
+}
+
+function changeViewWeek(dir) { viewWeekOffset += dir; renderViewSection(); }
+
+function renderMemberFilter() {
+  const members = Object.keys(scheduleData);
+  const el = document.getElementById('member-filter');
+  let html = `<button class="filter-chip ${!filterMember?'active':''}" onclick="setFilter(null)">全員</button>`;
+  members.forEach(name => {
+    const color = scheduleData[name]?.color || '#888';
+    html += `<button class="filter-chip ${filterMember===name?'active':''}" onclick="setFilter('${name}')" style="border-color:${color}">${name}</button>`;
+  });
+  el.innerHTML = html;
+}
+
+function setFilter(name) { filterMember = name; renderMemberFilter(); renderViewSection(); }
+
+function renderViewSection() {
+  const days = getWeekDates(viewWeekOffset);
+  document.getElementById('view-week-label').textContent = formatWeekLabel(days);
+  if (viewTab === 'list') renderListView(days);
+  else renderCalView(days);
+}
+
+function renderListView(days) {
+  const members = Object.keys(scheduleData);
+  const filtered = filterMember ? [filterMember] : members;
+  const el = document.getElementById('list-section');
+  if (!members.length) { el.innerHTML = '<div class="empty">まだ登録がありません</div>'; return; }
+  let html = '';
+  days.forEach((d, i) => {
+    const key = dateKey(d);
+    const available = filtered.filter(n => scheduleData[n]?.entries?.[key]);
+    if (!available.length) return;
+    html += `<div class="list-day"><div class="list-day-hd">${d.getMonth()+1}月${d.getDate()}日（${DAY_NAMES[i]}）— ${available.length}名</div>`;
+    available.forEach(name => {
+      const e = scheduleData[name].entries[key];
+      const color = scheduleData[name].color || '#888';
+      const safeName = name.replace(/'/g,"\\'");
+      const safeKey = key;
+      html += `<div class="list-member">
+        <div class="avatar" style="background:${color}">${name.charAt(0)}</div>
+        <div style="flex:1">
+          <div class="member-name-row">
+            <span class="member-name">${name}</span>
+            ${e.confirmed ? '<span class="confirmed-badge">確定</span>' : ''}
+          </div>
+          <div class="member-time">🕐 ${e.start} 〜 ${e.end}</div>
+          ${e.comment ? `<div class="member-comment">${e.comment}</div>` : ''}
+        </div>
+        <button class="confirm-btn ${e.confirmed?'confirmed':''}" onclick="toggleConfirm('${safeName}','${safeKey}')">${e.confirmed?'確定解除':'確定にする'}</button>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  el.innerHTML = html || '<div class="empty">この週は登録がありません</div>';
+}
+
+function renderCalView(days) {
+  const members = Object.keys(scheduleData);
+  const filtered = filterMember ? [filterMember] : members;
+  const el = document.getElementById('cal-section');
+  if (!members.length) { el.innerHTML = '<div class="empty">まだ登録がありません</div>'; return; }
+  let html = '<div class="cal-wrap"><table class="cal-table"><thead><tr><th></th>';
+  days.forEach((d,i) => html += `<th>${DAY_NAMES[i]}<br>${d.getMonth()+1}/${d.getDate()}</th>`);
+  html += '</tr></thead><tbody>';
+  filtered.forEach(name => {
+    const info = scheduleData[name];
+    if (!info) return;
+    const color = info.color || '#888';
+    html += `<tr><td style="white-space:nowrap;padding:4px;font-size:11px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:3px;vertical-align:middle"></span>${name}</td>`;
+    days.forEach(d => {
+      const key = dateKey(d);
+      const e = info.entries?.[key];
+      html += '<td>' + (e ? `<div class="cal-dot${e.confirmed?' confirmed-dot':''}" style="background:${color}" title="${e.start}〜${e.end}">${e.confirmed?'✓':'○'}</div>` : '') + '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+async function toggleConfirm(name, day) {
+  try {
+    const current = scheduleData[name]?.entries?.[day];
+    if (!current) return;
+    const newVal = !current.confirmed;
+    await fbPatch('/schedules/' + encodeURIComponent(name) + '/entries/' + day, { confirmed: newVal });
+    scheduleData[name].entries[day].confirmed = newVal;
+    renderViewSection();
+  } catch(e) {
+    alert('更新に失敗しました');
+  }
+}
+
+renderDayGrid();
+</script>
+</body>
+</html>
